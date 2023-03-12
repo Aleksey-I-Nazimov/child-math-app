@@ -1,7 +1,7 @@
 package org.numamo.child.math.app.view.sum.tables;
 
 import org.numamo.child.math.app.controller.api.AssignmentCallback;
-import org.numamo.child.math.app.view.sum.tables.renders.sum.api.SumTableCellRenderExt;
+import org.numamo.child.math.app.view.sum.tables.renders.api.TableCellRenderExt;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -23,13 +23,13 @@ public final class AssignmentTablePanel extends JPanel implements AssignmentCall
 
     private static final Logger LOGGER = getLogger(AssignmentTablePanel.class);
 
-    private final List<SumTableCellRenderExt> renderList;
+    private final List<TableCellRenderExt> renderList;
     private final TableModel tableModel;
     private JTable assignmentTable;
 
     @Autowired
     public AssignmentTablePanel(
-            final List<SumTableCellRenderExt> renderList,
+            final List<TableCellRenderExt> renderList,
             final TableModel tableModel
     ) {
         this.renderList = renderList;
@@ -42,7 +42,7 @@ public final class AssignmentTablePanel extends JPanel implements AssignmentCall
         assignmentTable = new JTable(tableModel);
         renderList
                 .stream()
-                .collect(toMap((Function<SumTableCellRenderExt, Class>) SumTableCellRenderExt::getCellClass, v->v))
+                .collect(toMap((Function<TableCellRenderExt, Class>) TableCellRenderExt::getCellClass, v -> v))
                 .forEach(assignmentTable::setDefaultRenderer);
 
         assignmentTable.setShowGrid(true);

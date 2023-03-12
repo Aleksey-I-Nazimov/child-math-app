@@ -2,9 +2,13 @@ package org.numamo.child.math.app.controller;
 
 import org.numamo.child.math.app.controller.api.ActionListener;
 import org.numamo.child.math.app.controller.api.AssignmentCallback;
-import org.numamo.child.math.app.model.sum.api.MathModel;
-import org.numamo.child.math.app.service.api.UserAssignmentDmo;
+import org.numamo.child.math.app.model.table.api.TableTaskAnswerModel;
+import org.numamo.child.math.app.model.task.UserAssignmentDmo;
+import org.numamo.child.math.app.model.task.UserLessonDmo;
+import org.numamo.child.math.app.service.api.ScoreCalculator;
+import org.numamo.child.math.app.service.api.StorageService;
 import org.numamo.child.math.app.service.api.UserAssignmentService;
+import org.numamo.child.math.app.service.api.UserLessonService;
 import org.numamo.child.math.app.view.frame.ApplicationFrameManager;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +16,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 
-import static org.numamo.child.math.app.service.api.UserAssignmentDmo.ASSIGNMENT_SIZE;
 import static org.slf4j.LoggerFactory.getLogger;
 
 
@@ -21,31 +24,34 @@ public final class ActionControllerForCheckSum implements ActionListener.ForChec
 
     private static final Logger LOGGER = getLogger(ActionControllerForCheckSum.class);
 
-    private final MathModel mathModel;
+    private final StorageService storageService;
+    private final UserAssignmentService userAssignmentService;
+    private final UserLessonService userLessonService;
     private final AssignmentCallback.ForSumTable tableCallback;
     private final AssignmentCallback.ForSumCheckButton buttonCallback;
-    //private final AssignmentFinishCallback.ForSumTable finishTableCallback;
-    //private final AssignmentFinishCallback.ForSumCheckButton finishButtonCallback;
-    private final UserAssignmentService userAssignmentService;
     private final ApplicationFrameManager frameManager;
+    private final TableTaskAnswerModel tableTaskAnswerModel;
+    private final ScoreCalculator scoreCalculator;
 
     @Autowired
     public ActionControllerForCheckSum(
-            MathModel mathModel,
+            StorageService storageService,
+            UserAssignmentService userAssignmentService,
+            UserLessonService userLessonService,
             AssignmentCallback.ForSumTable tableCallback,
             AssignmentCallback.ForSumCheckButton buttonCallback,
-            //AssignmentFinishCallback.ForSumTable finishTableCallback,
-            //AssignmentFinishCallback.ForSumCheckButton finishButtonCallback,
-            UserAssignmentService userAssignmentService,
-            ApplicationFrameManager frameManager
+            ApplicationFrameManager frameManager,
+            TableTaskAnswerModel tableTaskAnswerModel,
+            ScoreCalculator scoreCalculator
     ) {
-        this.mathModel = mathModel;
+        this.storageService = storageService;
+        this.userAssignmentService = userAssignmentService;
+        this.userLessonService = userLessonService;
         this.tableCallback = tableCallback;
         this.buttonCallback = buttonCallback;
-        //this.finishTableCallback = finishTableCallback;
-        //this.finishButtonCallback = finishButtonCallback;
-        this.userAssignmentService = userAssignmentService;
         this.frameManager = frameManager;
+        this.tableTaskAnswerModel = tableTaskAnswerModel;
+        this.scoreCalculator = scoreCalculator;
     }
 
 
@@ -54,34 +60,40 @@ public final class ActionControllerForCheckSum implements ActionListener.ForChec
 
         LOGGER.info("Checking the sum table: {}",e);
 
-        final UserAssignmentDmo assignment = userAssignmentService.getCurrentAssignment();
+        final UserLessonDmo.AssignmentIteratorDmo iterator = storageService.getCurrent()
+                .orElseThrow(NullPointerException::new).getIterator();
+        final UserAssignmentDmo assignment = iterator.getCurrent().orElseThrow(NullPointerException::new);
+        assignment.setUserTaskResults(tableTaskAnswerModel.getAllAnswers());
 
-        if (!assignment.getShowCheck()) {
-            LOGGER.info("The table is going to be checked...");
-            assignment.setShowCheck(true);
-            assignment.incrementAttempt();
-            tableCallback.onCheck(e);
-            buttonCallback.onCheck(e);
+        final boolean success = userAssignmentService.checkAssignment(assignment);
+        tableCallback.onCheck(e);
+        buttonCallback.onCheck(e);
 
-        } else {
-            assignment.setComplete(mathModel.isCompleted());
-            if(assignment.isComplete()) {
-                if (userAssignmentService.tryToGoThrough()) {
-
-                    JOptionPane.showMessageDialog(frameManager.getFrame(),
-                            "Вы успешно выполнили задание!");
-
-                    userAssignmentService.saveResults();
-                }
-                mathModel.cleanAndRestart(ASSIGNMENT_SIZE);
+        if (success) {
+            if (iterator.hasNext()) {
+                final UserAssignmentDmo next = iterator.next();
+                tableTaskAnswerModel.update(next.getUserTasks());
                 tableCallback.onNewAssignment(e);
                 buttonCallback.onNewAssignment(e);
+                LOGGER.info("The assignment was set {}", next);
 
             } else {
-                LOGGER.info("The math assignment was not completed...");
-                assignment.incrementAttempt();
-                tableCallback.onCheck(e);
-                buttonCallback.onCheck(e);
+                final int score = scoreCalculator.calculateScore(storageService.getCurrent()
+                        .orElseThrow(NullPointerException::new));
+                JOptionPane.showMessageDialog(frameManager.getFrame(),
+                        "Вы выполнили задание. Ваша оценка = " + score);
+                storageService.getCurrent().map(c -> {
+                    storageService.saveLesson(c);
+                    return c;
+                });
+                storageService.setCurrent(userLessonService.makeLesson());
+                final UserLessonDmo.AssignmentIteratorDmo newIterator = storageService.getCurrent()
+                        .orElse(null).getIterator();
+                final UserAssignmentDmo next = newIterator.next();
+                tableTaskAnswerModel.update(next.getUserTasks());
+                tableCallback.onNewAssignment(e);
+                buttonCallback.onNewAssignment(e);
+                LOGGER.info("The new lesson assignment was set {}", next);
             }
         }
     }

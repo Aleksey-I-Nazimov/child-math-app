@@ -1,8 +1,10 @@
-package org.numamo.child.math.app.model.sum;
+package org.numamo.child.math.app.model.table;
 
-import org.numamo.child.math.app.model.sum.api.ArithmeticResult;
-import org.numamo.child.math.app.model.sum.api.MathModel;
-import org.numamo.child.math.app.service.api.UserAssignmentService;
+import org.numamo.child.math.app.model.table.api.TableTaskAnswerModel;
+import org.numamo.child.math.app.model.task.UserAssignmentDmo;
+import org.numamo.child.math.app.model.task.UserTaskResultDmo;
+import org.numamo.child.math.app.service.api.MathAssignmentConfig;
+import org.numamo.child.math.app.service.api.StorageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -11,30 +13,40 @@ import javax.swing.table.TableModel;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.numamo.child.math.app.service.api.UserAssignmentDmo.ASSIGNMENT_SIZE;
+import static java.math.BigDecimal.valueOf;
 
 
+/**
+ * The main SWING table model implementation.
+ * It's used for SWING JTable
+ *
+ * @author Nazimov Aleksey I.
+ */
 @Component
 public final class TableModelImpl implements TableModel {
 
     private static final int COLUMNS_NUMBER = 8;
 
     private final List<TableModelListener> listeners = new ArrayList<>();
-    private final MathModel mathModel;
-    private final UserAssignmentService userAssignmentService;
+
+    private final MathAssignmentConfig mathAssignmentConfig;
+    private final TableTaskAnswerModel tableTaskAnswerModel;
+    private final StorageService storageService;
 
     @Autowired
     public TableModelImpl(
-            MathModel mathModel,
-            UserAssignmentService userAssignmentService
+            MathAssignmentConfig mathAssignmentConfig,
+            TableTaskAnswerModel tableTaskAnswerModel,
+            StorageService storageService
     ) {
-        this.mathModel = mathModel;
-        this.userAssignmentService = userAssignmentService;
+        this.mathAssignmentConfig = mathAssignmentConfig;
+        this.tableTaskAnswerModel = tableTaskAnswerModel;
+        this.storageService = storageService;
     }
 
     @Override
     public int getRowCount() {
-        return ASSIGNMENT_SIZE;
+        return mathAssignmentConfig.getMaxNumberOfMathTasks();
     }
 
     @Override
@@ -55,6 +67,7 @@ public final class TableModelImpl implements TableModel {
                 return "Y";
             case 4:
                 return "Как сравнить";
+            // Answer column: For making answers:
             case 5:
                 return "Ответ";
             case 6:
@@ -79,12 +92,13 @@ public final class TableModelImpl implements TableModel {
                 return Integer.class;
             case 4:
                 return String.class;
+            // Answer column: For making answers:
             case 5:
                 return Integer.class;
             case 6:
                 return Integer.class;
             case 7:
-                return ArithmeticResult.class;
+                return UserTaskResultDmo.class;
             default:
                 throw new IllegalArgumentException("Unknown column: " + columnIndex);
         }
@@ -92,6 +106,7 @@ public final class TableModelImpl implements TableModel {
 
     @Override
     public boolean isCellEditable(int rowIndex, int columnIndex) {
+        // Answer column: For making answers:
         return columnIndex == 5;
     }
 
@@ -100,23 +115,31 @@ public final class TableModelImpl implements TableModel {
         if (columnIndex == 0) {
             return rowIndex + 1;
         } else if (columnIndex == 1) {
-            return mathModel.getValue1(rowIndex);
+            return tableTaskAnswerModel.getValue1(rowIndex);
         } else if (columnIndex == 2) {
-            return mathModel.getOperation(rowIndex);
+
+            // The main operation description:
+            return tableTaskAnswerModel.getOperation(rowIndex).getDescription();
+
         } else if (columnIndex == 3) {
-            return mathModel.getValue2(rowIndex);
+            return tableTaskAnswerModel.getValue2(rowIndex);
         } else if (columnIndex == 4) {
-            return mathModel.getComparator(rowIndex);
+
+            // The main comparator:
+            return tableTaskAnswerModel.getComparator(rowIndex).getDescription();
         } else if (columnIndex == 5) {
-            return mathModel.getUserAnswer(rowIndex);
+            return tableTaskAnswerModel.getLastUserAnswer(rowIndex);
         } else if (columnIndex == 6) {
-            if (!userAssignmentService.getCurrentAssignment().wasNotFailed()) {
-                return mathModel.getCorrectAnswer(rowIndex);
+            final UserAssignmentDmo assignment = storageService.getCurrent().orElse(null)
+                    .getIterator().getCurrent().orElse(null);
+
+            if (assignment.getAutoCheck().isFailedByChecks()) {
+                return tableTaskAnswerModel.getCorrectAnswer(rowIndex);
             } else {
                 return null;
             }
         } else if (columnIndex == 7) {
-            return mathModel.checkUserAnswerAt(rowIndex);
+            return tableTaskAnswerModel.checkUserAnswerAt(rowIndex);
         } else {
             throw new IllegalArgumentException("Unknown values " + rowIndex + ", " + columnIndex);
         }
@@ -126,7 +149,7 @@ public final class TableModelImpl implements TableModel {
     public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
         try {
             final int value = Integer.parseInt(aValue.toString());
-            mathModel.putUserAnswer(value, rowIndex);
+            tableTaskAnswerModel.appendUserAnswer(valueOf(value), rowIndex);
         } catch (Exception e) {
             e.printStackTrace();
         }

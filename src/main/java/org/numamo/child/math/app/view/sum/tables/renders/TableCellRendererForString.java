@@ -1,7 +1,7 @@
-package org.numamo.child.math.app.view.sum.tables.renders.sum;
+package org.numamo.child.math.app.view.sum.tables.renders;
 
 import org.numamo.child.math.app.view.sum.tables.renders.api.ColorCellStrategy;
-import org.numamo.child.math.app.view.sum.tables.renders.sum.api.SumTableCellRenderExt;
+import org.numamo.child.math.app.view.sum.tables.renders.api.TableCellRenderExt;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -15,15 +15,15 @@ import static org.slf4j.LoggerFactory.getLogger;
 
 
 @org.springframework.stereotype.Component
-public final class SumTableCellRendererForString extends DefaultTableCellRenderer implements SumTableCellRenderExt.ForString {
+public final class TableCellRendererForString extends DefaultTableCellRenderer implements TableCellRenderExt.ForString {
 
-    private static final Logger LOGGER = getLogger(SumTableCellRendererForString.class);
+    private static final Logger LOGGER = getLogger(TableCellRendererForString.class);
 
     private final ColorCellStrategy colorCellStrategy;
     private final TableModel tableModel;
 
     @Autowired
-    public SumTableCellRendererForString(
+    public TableCellRendererForString(
             final ColorCellStrategy colorCellStrategy,
             final TableModel tableModel
     ) {
@@ -41,7 +41,8 @@ public final class SumTableCellRendererForString extends DefaultTableCellRendere
             final int column
     ) {
         LOGGER.trace("Rendering: c[{}][{}]={}, selected={}/focused={}", row, column, value, isSelected, hasFocus);
-        final JLabel component = (JLabel) super.getTableCellRendererComponent(table,value,isSelected,hasFocus,row,column);
+        final JLabel component = (JLabel) super.getTableCellRendererComponent(table,
+                value, isSelected, hasFocus, row, column);
 
         final Class<?> columnClass = tableModel.getColumnClass(column);
         if (columnClass==String.class) {
@@ -51,7 +52,6 @@ public final class SumTableCellRendererForString extends DefaultTableCellRendere
         }
 
         colorCellStrategy.updateColor(component,row,column);
-
         return component;
     }
 }

@@ -1,9 +1,14 @@
 package org.numamo.child.math.app.service.api;
 
+import org.numamo.child.math.app.model.task.UserAssignmentDmo;
+import org.numamo.child.math.app.model.task.UserTaskResultDmo;
+
 public interface UserAssignmentService {
-    UserAssignmentDmo getCurrentAssignment();
 
-    boolean tryToGoThrough();
+    UserAssignmentDmo makeAssignment();
 
-    void saveResults ();
+    boolean checkAssignment(UserAssignmentDmo assignment);
+
+    boolean checkTask(UserTaskResultDmo taskResult);
+
 }

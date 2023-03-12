@@ -1,7 +1,7 @@
-package org.numamo.child.math.app.view.sum.tables.renders.sum;
+package org.numamo.child.math.app.view.sum.tables.renders;
 
 import org.numamo.child.math.app.view.sum.tables.renders.api.ColorCellStrategy;
-import org.numamo.child.math.app.view.sum.tables.renders.sum.api.SumTableCellRenderExt;
+import org.numamo.child.math.app.view.sum.tables.renders.api.TableCellRenderExt;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -14,14 +14,14 @@ import static org.slf4j.LoggerFactory.getLogger;
 
 
 @org.springframework.stereotype.Component
-public final class SumTableCellRendererForInteger extends DefaultTableCellRenderer implements SumTableCellRenderExt.ForInt {
+public final class TableCellRendererForInteger extends DefaultTableCellRenderer implements TableCellRenderExt.ForInt {
 
-    private static final Logger LOGGER = getLogger(SumTableCellRendererForInteger.class);
+    private static final Logger LOGGER = getLogger(TableCellRendererForInteger.class);
 
     private final ColorCellStrategy colorCellStrategy;
 
     @Autowired
-    public SumTableCellRendererForInteger(
+    public TableCellRendererForInteger(
             final ColorCellStrategy colorCellStrategy
     ) {
         this.colorCellStrategy = colorCellStrategy;
